@@ -1,4 +1,8 @@
 
+
+NPrite is an extension for the Yii Framework.
+It can be found here: http://www.yiiframework.com/extension/nsprite/
+
 The NSprite Yii extension aims to help solve the problem of generating sprites for your application.
 
 There are many great icon libraries that are ubiquitous on the web, - famfamfam - fugue Each of these have thousands of icons, a typical project uses a handfull of these.

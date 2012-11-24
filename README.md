@@ -1,6 +1,6 @@
 
 
-NPrite is an extension for the Yii Framework.
+NSPrite is an extension for the Yii Framework.
 It can be found here: http://www.yiiframework.com/extension/nsprite/
 
 The NSprite Yii extension aims to help solve the problem of generating sprites for your application.

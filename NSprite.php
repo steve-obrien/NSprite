@@ -37,7 +37,7 @@
  * 
  * @property $cssParentClass
  * @property $sprites populated automatically if empty
- * @property mixed $imageFolderPath
+ * @property array $imageFolderPath an array of filepaths to find images to be added to the sprite
  * @author Steven OBrien <steven.obrien@newicon.net>
  * @package nii
  */
@@ -68,12 +68,10 @@ Class NSprite extends CApplicationComponent
 	public $sprites = array();
 	
 	/**
-	 * Stores the path to the folder where the individual images that 
-	 * will be included in the spite are kept.
-	 * can be an array of imagefolder paths
+	 * Array of folder paths where images (to be added to the sprite) are stored.
 	 * @property mixed 
 	 */
-	public $imageFolderPath;
+	private $_imageFolderPath = array();
 	
 	/**
 	 * array of all image data
@@ -160,29 +158,31 @@ Class NSprite extends CApplicationComponent
 	 * @return void
 	 */
 	private function _generateImage(){
-		$total = $this->_totalSize(); 
-        $sprite = imagecreatetruecolor($total['width'], $total['height']); 
-        imagesavealpha($sprite, true); 
-        $transparent = imagecolorallocatealpha($sprite, 0, 0, 0, 127); 
-        imagefill($sprite, 0, 0, $transparent); 
-        $top = 0; 
-        foreach($this->_images as $image){ 
-            $img = imagecreatefrompng($image['path']); 
-            imagecopy($sprite, $img, ($total['width'] - $image['width']), $top, 0, 0,  $image['width'], $image['height']); 
-            $top += $image['height']; 
-        }
-		$fp = $this->getPublishedAssetsPath().DIRECTORY_SEPARATOR.'sprite.png';
-		imagepng($sprite, $fp);
-        ImageDestroy($sprite); 
+		$total = $this->_totalSize();
+		if($total['width'] > 0 && $total['height'] > 0){
+			$sprite = imagecreatetruecolor($total['width'], $total['height']); 
+			imagesavealpha($sprite, true); 
+			$transparent = imagecolorallocatealpha($sprite, 0, 0, 0, 127); 
+			imagefill($sprite, 0, 0, $transparent); 
+			$top = 0; 
+			foreach($this->_images as $image){ 
+				$img = imagecreatefrompng($image['path']); 
+				imagecopy($sprite, $img, ($total['width'] - $image['width']), $top, 0, 0,  $image['width'], $image['height']); 
+				$top += $image['height']; 
+			}
+			$fp = $this->getPublishedAssetsPath().DIRECTORY_SEPARATOR.'sprite.png';
+			imagepng($sprite, $fp);
+			ImageDestroy($sprite);
+		}
 	}
 	
 	/**
-     * generates css code for all the items in the NSprite::_images array
+    	 * generates css code for all the items in the NSprite::_images array
 	 * and publishes the sprite.css file into the published assets folder
 	 * 
 	 * @return void
-     */ 
-    private function _generateCss(){ 
+     	 */ 
+    	private function _generateCss(){ 
 		$total = $this->_totalSize();
 		$top = $total['height']; 
 		$css = '.'.$this->cssSpriteClass.'{background-image:url(sprite.png);}'."\n";
@@ -191,7 +191,6 @@ Class NSprite extends CApplicationComponent
 		
 		foreach($this->_images as $image) 
 		{ 
-			echo $image['name'];
 			$css .= '.'.$image['name'].'{';
 			$css .= 'background-position:'.($image['width'] - $total['width']).'px '.($top - $total['height']).'px;'; 
 			$css .= 'width:'.$image['width'].'px;';
@@ -208,7 +207,7 @@ Class NSprite extends CApplicationComponent
 	 * 
 	 * @return array 
 	 */
-    private function _totalSize(){
+    	private function _totalSize(){
 		$arr = array('width' => 0, 'height' => 0); 
 		foreach($this->_images as $image){ 
 			if($arr['width'] < $image['width'])
@@ -216,7 +215,7 @@ Class NSprite extends CApplicationComponent
 			$arr['height'] += $image['height']; 
 		}
 		return $arr;
-    } 
+    	} 
 	
 	/**
 	 * create an array with specific individual image information in
@@ -241,7 +240,6 @@ Class NSprite extends CApplicationComponent
 			// convert the relative path into the class name
 			// replace slashes with dashes and remove extension from file name
 			$p = pathinfo($imgPath);
-			echo $s['path'];
 			$name = str_replace(array('/','\\','_'),'-', $s['path']);
 			$this->_images[$i]['name'] = str_replace(array($p['extension'],'.'),'',$name);
 		}
@@ -271,29 +269,46 @@ Class NSprite extends CApplicationComponent
 	 */
 	public function findFiles(){
 		$options = array('fileTypes'=>array('png','gif','jpeg','jpg'));
-		if(is_array($this->getIconPath())){
-			// must be an array of folders
-			foreach($this->getIconPath() as $iFolder){
-				if(!is_dir($iFolder))
-					throw new CException("The folder path '$iFolder' does not exist.");
-				$files = CFileHelper::findFiles($iFolder, $options);
-				foreach($files as $p){
-					$this->sprites[] = array(
-						'imageFolder' => $iFolder,
-						'path' => trim(str_replace(realpath($iFolder), '', $p),DIRECTORY_SEPARATOR)
-					);
-				}
-			}
-			
-		}else{
-			$files = CFileHelper::findFiles($this->getIconPath(), $options);
+		// must be an array of folders
+		foreach($this->getIconPath() as $iFolder){
+			if(!is_dir($iFolder))
+				throw new CException("The folder path '$iFolder' does not exist.");
+			$files = CFileHelper::findFiles($iFolder, $options);
 			foreach($files as $p){
 				$this->sprites[] = array(
-					'imageFolder' => $this->getIconPath(),
-					'path' => trim(str_replace(realpath($this->getIconPath()), '', $p),'/')
+					'imageFolder' => $iFolder,
+					'path' => trim(str_replace(realpath($iFolder), '', $p),DIRECTORY_SEPARATOR)
 				);
 			}
 		}
+	}
+	
+	/**
+	 * Get the array of imageFolderPaths
+	 */
+	public function getImageFolderPath(){
+		return $this->_imageFolderPath;
+	}
+	
+	/**
+	 * Set the imageFolderPath property
+	 * 
+	 * @param array $value an array of paths array('/file/path/1', 'file/path/2')
+	 * @return void
+	 */
+	public function setImageFolderPath($arrayPaths, $merge=true){
+		if ($merge)
+			$this->_imageFolderPath = array_merge($this->_imageFolderPath, $arrayPaths);
+		else
+			$this->_imageFolderPath = $arrayPaths;
+	}
+	
+	/**
+	 * Add one path to the list of image paths.
+	 * @param string $path 
+	 */
+	public function addImageFolderPath($path){
+		$this->_imageFolderPath[] = $path;
 	}
 	
 }
